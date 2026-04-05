@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" fill="none">
+  <!-- Dark background -->
+  <rect width="400" height="500" fill="#1A0D05"/>
+  <!-- Base oval (darker gold) -->
+  <ellipse cx="200" cy="335" rx="135" ry="118" fill="#C8922A"/>
+  <!-- Teardrop/flame (lighter gold) -->
+  <path d="M200 60 C200 60 120 160 120 255 C120 310 155 360 200 370 C245 360 280 310 280 255 C280 160 200 60 200 60Z" fill="#E5B858"/>
+  <!-- Inner oval highlight -->
+  <ellipse cx="185" cy="220" rx="30" ry="42" fill="#C8922A" opacity="0.75"/>
+</svg>

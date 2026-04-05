@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  OPERATOR
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  PACKED
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  CASHFREE
+  PAYTM
+  COD
+}
+
+enum BannerPosition {
+  HERO
+  MIDDLE
+  BOTTOM
+}
+
+model User {
+  id          String    @id @default(cuid())
+  phone       String    @unique
+  name        String?
+  email       String?   @unique
+  role        Role      @default(CUSTOMER)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  addresses   Address[]
+  orders      Order[]
+  otpRequests OtpRequest[]
+  cart        CartItem[]
+  reviews     Review[]
+  @@map("users")
+}
+
+model OtpRequest {
+  id        String   @id @default(cuid())
+  phone     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  @@map("otp_requests")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+  @@map("categories")
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  sku           String?   @unique
+  categoryId    String
+  mrp           Float
+  discountPrice Float?
+  stock         Int       @default(0)
+  isActive      Boolean   @default(true)
+  isFeatured    Boolean   @default(false)
+  isTrending    Boolean   @default(false)
+  isNewLaunch   Boolean   @default(false)
+  newLaunchAt   DateTime?
+  tags          String[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  category      Category         @relation(fields: [categoryId], references: [id])
+  images        ProductImage[]
+  variants      ProductVariant[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  label     String
+  quantity  Float
+  unit      String  @default("kg")
+  mrp       Float
+  price     Float
+  stock     Int     @default(0)
+  isActive  Boolean @default(true)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  @@map("product_variants")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  variantId String?
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User            @relation(fields: [userId], references: [id])
+  product   Product         @relation(fields: [productId], references: [id])
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  @@unique([userId, productId, variantId])
+  @@map("cart_items")
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User    @relation(fields: [userId], references: [id])
+  orders    Order[]
+  @@map("addresses")
+}
+
+model Order {
+  id              String         @id @default(cuid())
+  orderNumber     String         @unique
+  userId          String
+  addressId       String
+  status          OrderStatus    @default(PENDING)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  paymentGateway  PaymentGateway @default(RAZORPAY)
+  paymentId       String?
+  razorpayOrderId String?
+  subtotal        Float
+  discount        Float          @default(0)
+  shippingCharge  Float          @default(0)
+  totalAmount     Float
+  costPrice       Float          @default(0)
+  profit          Float?
+  notes           String?
+  shiprocketOrderId String?
+  trackingNumber  String?
+  courierName     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id])
+  address         Address        @relation(fields: [addressId], references: [id])
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  productId    String
+  variantId    String?
+  productName  String
+  variantLabel String?
+  quantity     Int
+  mrp          Float
+  price        Float
+  costPrice    Float    @default(0)
+  order        Order          @relation(fields: [orderId], references: [id])
+  product      Product        @relation(fields: [productId], references: [id])
+  variant      ProductVariant? @relation(fields: [variantId], references: [id])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+  order     Order       @relation(fields: [orderId], references: [id])
+  @@map("order_status_history")
+}
+
+model Banner {
+  id          String         @id @default(cuid())
+  title       String?
+  subtitle    String?
+  image       String
+  link        String?
+  position    BannerPosition @default(HERO)
+  isActive    Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  publishAt   DateTime?
+  unpublishAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  @@map("banners")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  productId  String
+  rating     Int
+  comment    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+model MangoPrice {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  variety   String
+  minPrice  Float
+  maxPrice  Float
+  avgPrice  Float
+  unit      String   @default("kg")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([date, variety])
+  @@map("mango_prices")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  title       String
+  amount      Float
+  category    String
+  date        DateTime @db.Date
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("expenses")
+}
+
+model PaymentGatewayConfig {
+  id        String         @id @default(cuid())
+  gateway   PaymentGateway @unique
+  isActive  Boolean        @default(false)
+  isDefault Boolean        @default(false)
+  config    Json
+  updatedAt DateTime       @updatedAt
+  @@map("payment_gateway_configs")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  @@map("settings")
+}
+
+model ShiprocketWebhook {
+  id         String   @id @default(cuid())
+  orderId    String?
+  awb        String?
+  event      String
+  payload    Json
+  receivedAt DateTime @default(now())
+  @@map("shiprocket_webhooks")
+}
