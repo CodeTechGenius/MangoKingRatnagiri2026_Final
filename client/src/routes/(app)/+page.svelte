@@ -30,7 +30,7 @@
 <svelte:head><title>Mango King Ratnagiri — Premium Alphonso Mangoes</title></svelte:head>
 
 <!-- Hero: full viewport on all screens. Navbar overlays transparently. -->
-<div class="-mt-[72px] md:-mt-[32px]">
+<div class="-mt-[72px] md:-mt-[10px]">
   <HeroBanner {banners} />
 </div>
 
